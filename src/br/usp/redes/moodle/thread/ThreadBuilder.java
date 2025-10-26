@@ -23,6 +23,7 @@ public class ThreadBuilder {
 	private static AtomicBoolean isThreadFazProvaRodando;
 	private static AtomicBoolean isThreadCorrigeProvaRodando;
 	private static AtomicBoolean isThreadExibeNotasRodando;
+	private static AtomicBoolean isThreadVerificaStatusRodando;
 
 	//helper do cliente e scanner
 	private ClientHelper helper;
@@ -36,6 +37,7 @@ public class ThreadBuilder {
 		isThreadFazProvaRodando = new AtomicBoolean(false);
 		isThreadCorrigeProvaRodando = new AtomicBoolean(false);
 		isThreadExibeNotasRodando = new AtomicBoolean(false);
+		isThreadVerificaStatusRodando = new AtomicBoolean(false);
 	}
 
 	/**
@@ -69,6 +71,11 @@ public class ThreadBuilder {
 						Thread threadMostraNotas = montaThreadMostraNotas();
 						threadMostraNotas.start();
 						threadMostraNotas.join();
+					}
+					while (isThreadVerificaStatusRodando.get()) {
+						Thread threadVerificaStatus = montaThreadVerificaStatus();
+						threadVerificaStatus.start();
+						threadVerificaStatus.join();
 					}
 					String linha = sc.nextLine();
 					out.println(linha);
@@ -111,6 +118,8 @@ public class ThreadBuilder {
 						if (temNotas) {
 							isThreadExibeNotasRodando.set(true);
 						}
+					} else if (linha.equals("verificarStatus")) { //comando para status UDP
+						isThreadVerificaStatusRodando.set(true); //
 					} else if (linha.equals("Comando Desconhecido")) { //servidor sinalizou que comando enviado é desconhecido
 						System.out.println("Comando Inválido: digite uma das opções do menu!");
 						helper.getSistema().menu2Nivel(helper.getUsuarioLogado());
@@ -194,6 +203,22 @@ public class ThreadBuilder {
 				helper.getSistema().exibirNotas(helper.getNotasDisponiveis(), sc, (Aluno) helper.getUsuarioLogado());
 				helper.getSistema().menu2Nivel(helper.getUsuarioLogado());
 				isThreadExibeNotasRodando.set(false);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
+	}
+	
+	/**
+	 * Método responsável por criar a thread que verifica o status do servidor via UDP.
+	 * @return a thread verificadora de status
+	*/
+	private Thread montaThreadVerificaStatus() {
+		return new Thread(() -> {
+			try {
+				helper.verificarStatusServidorUDP(); // Chama a função UDP do helper
+				helper.getSistema().menu2Nivel(helper.getUsuarioLogado()); // Volta para o menu
+				isThreadVerificaStatusRodando.set(false);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

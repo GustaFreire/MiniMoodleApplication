@@ -5,6 +5,9 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.List;
 import java.util.Vector;
@@ -25,6 +28,11 @@ import br.usp.redes.moodle.system.Sistema;
 @SuppressWarnings("unchecked")
 public class ClientHelper {
 
+	//constantes
+	private static final int UDP_PORT = 12346;
+	private static final int MAX_PACKET_SIZE = 1024;
+	private static final String SERVER_HOST = "localhost";
+	
 	//atributos
 	private Sistema sistema;
 	private Usuario usuarioLogado;
@@ -41,6 +49,69 @@ public class ClientHelper {
 		this.provasDisponiveis = new Vector<>();
 		this.respostasDisponiveis = new Vector<>();
 		this.notasDisponiveis = new Vector<>();
+	}
+
+	/**
+	 * Método responsável por enviar uma requisição UDP ao servidor para verificar o status.
+	*/
+	public void verificarStatusServidorUDP() {
+		try (DatagramSocket clientSocket = new DatagramSocket()) {
+			InetAddress IPAddress = InetAddress.getByName(SERVER_HOST);
+			
+			String statusRequest = "STATUS_REQUEST"; // Mensagem simples de requisição.
+			byte[] sendData = statusRequest.getBytes();
+			
+			// Envia o pacote UDP.
+			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, UDP_PORT);
+			clientSocket.send(sendPacket);
+			
+			System.out.println("Requisição de status (UDP) enviada para o servidor na porta " + UDP_PORT);
+			
+			// Prepara para receber a resposta.
+			byte[] receiveData = new byte[MAX_PACKET_SIZE];
+			DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+			
+			clientSocket.setSoTimeout(3000); // 3 segundos de timeout para não bloquear indefinidamente
+			
+			// Recebe o pacote UDP de resposta.
+			clientSocket.receive(receivePacket);
+			
+			// Processa a resposta.
+			String response = new String(receivePacket.getData(), 0, receivePacket.getLength()).trim();
+			processarRespostaStatus(response);
+			
+		} catch (java.net.SocketTimeoutException e) {
+			System.out.println("Timeout: O servidor não respondeu à requisição de status UDP."); //
+		} catch (Exception e) {
+			System.err.println("Erro na comunicação UDP: " + e.getMessage()); //
+		}
+	}
+	
+	/**
+	 * Processa a string de resposta recebida via UDP.
+	*/
+	private void processarRespostaStatus(String response) {
+		System.out.println("------------------------- STATUS DO SERVIDOR (UDP) -------------------------");
+		try {
+			// Espera um formato como: STATUS_ONLINE:X|PROVAS_DISPONIVEIS:Y
+			String[] parts = response.split("\\|");
+			int onlineUsers = 0;
+			int availableExams = 0;
+			
+			for (String part : parts) { //
+				if (part.startsWith("STATUS_ONLINE:")) {
+					onlineUsers = Integer.parseInt(part.substring("STATUS_ONLINE:".length()));
+				} else if (part.startsWith("PROVAS_DISPONIVEIS:")) {
+					availableExams = Integer.parseInt(part.substring("PROVAS_DISPONIVEIS:".length()));
+				}
+			}
+			
+			System.out.println("-> Usuários Online: " + onlineUsers);
+			System.out.println("-> Provas Cadastradas (Total): " + availableExams);
+			System.out.println("--------------------------------------------------------------------------");
+		} catch (Exception e) {
+			System.out.println("Erro ao processar a resposta do servidor: " + response);
+		}
 	}
 
 	/**

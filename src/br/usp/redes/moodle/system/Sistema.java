@@ -124,6 +124,7 @@ public class Sistema {
 		System.out.println("Escolha o que deseja fazer (digite o número da opção):");
 		apresentaOpcoes(usuario.getTipo());
 		System.out.println("3 - Logout");
+		System.out.println("4 - Verificar Status do Servidor (UDP)");
 		System.out.println("--------------------------------------------------------------------------------------");
 		System.out.println("Opção:");
 	}
@@ -134,6 +135,7 @@ public class Sistema {
 		System.out.println("Escolha o que deseja fazer (digite o número da opção):");
 		apresentaOpcoes(usuario.getTipo());
 		System.out.println("3 - Logout");
+		System.out.println("4 - Verificar Status do Servidor (UDP)");
 		System.out.println("--------------------------------------------------------------------------------------");
 		System.out.println("Opção:");
 	}

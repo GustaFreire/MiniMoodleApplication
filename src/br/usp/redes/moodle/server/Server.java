@@ -1,6 +1,9 @@
 package br.usp.redes.moodle.server;
 
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -21,7 +24,11 @@ import br.usp.redes.moodle.thread.ThreadProducer;
  * Classe principal, por meio dela o servidor é criado (executado na classe Main.java).
  */
 public class Server {
-
+	
+	// CONSTANTE PARA PORTAS
+	private static final int UDP_PORT = 12346;
+	private static final int TCP_PORT = 12345;
+	
 	// atributos
 	private ServerSocket servidor;
 	private ExecutorService threadPool;
@@ -34,13 +41,16 @@ public class Server {
 	// construtor inicializa atributos
 	public Server() throws IOException {
 		System.out.println("------------------------ Iniciando Servidor ------------------------");
-		this.servidor = new ServerSocket(12345);
+		this.servidor = new ServerSocket(TCP_PORT);
 		this.threadPool = Executors.newCachedThreadPool(new ThreadProducer());
 		this.usuarios = new Vector<>();
 		this.provasDisponiveis = new Vector<>();
 		this.respostasDisponiveis = new Vector<>();
 		this.correcoesDisponiveis = new Vector<>();
 		this.contadorUsuariosOnline = 0;
+		
+		// Inicializa o listener UDP em uma nova thread
+		new Thread(new UDPStatusListener(this)).start();
 	}
 
 	// inicia o servidor (roda sem parar)
@@ -72,8 +82,6 @@ public class Server {
 	public void adicionarCorrecaoCadastrada(Avaliacao provaCorrigida) {
 		this.correcoesDisponiveis.add(provaCorrigida);
 	}
-	
-	//manipula variavel de usuários online
 	
 	public void adicionarUsuarioOnline() {
 		this.contadorUsuariosOnline++;
@@ -108,4 +116,61 @@ public class Server {
 	public List<Avaliacao> getCorrecoesDisponiveis() {
 		return correcoesDisponiveis;
 	}
+	
+	/**
+	 * Classe interna para ouvir requisições UDP na porta 12346 e responder com o status do servidor.
+	*/
+	private static class UDPStatusListener implements Runnable {
+		private Server server;
+		private static final int MAX_PACKET_SIZE = 1024;
+		
+		public UDPStatusListener(Server server) { //
+			this.server = server;
+		}
+
+		@Override
+		public void run() {
+			try (DatagramSocket socket = new DatagramSocket(UDP_PORT)) {
+				System.out.println("Servidor UDP iniciado na porta " + UDP_PORT + " para checagem de status.");
+				byte[] receiveData = new byte[MAX_PACKET_SIZE];
+				
+				while (true) {
+					DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+					socket.receive(receivePacket); //Bloqueia até receber um pacote.
+					
+					// Prepara a resposta, incluindo o contador de usuários online e o total de provas.
+					String statusMessage = "STATUS_ONLINE:" + server.getContadorUsuariosOnline() + 
+					                       "|PROVAS_DISPONIVEIS:" + server.getProvasDisponiveis().size();
+					
+					byte[] sendData = statusMessage.getBytes();
+					InetAddress IPAddress = receivePacket.getAddress();
+					int port = receivePacket.getPort();
+					
+					DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, port);
+					socket.send(sendPacket); // Envia a resposta.
+					
+					System.out.println("UDP: Recebido pedido de status de " + IPAddress.getHostAddress() + 
+					                   ":" + port + ". Respondido com: " + statusMessage);
+				}
+				
+			} catch(Exception e) {
+				System.err.println("Erro no listener UDP: " + e.getMessage());
+			}
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 }

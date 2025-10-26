@@ -10,6 +10,7 @@ import br.usp.redes.moodle.model.Usuario;
 import br.usp.redes.moodle.commands.Comando1;
 import br.usp.redes.moodle.commands.Comando2;
 import br.usp.redes.moodle.commands.Comando3;
+import br.usp.redes.moodle.commands.Comando4;
 import br.usp.redes.moodle.commands.ComandoGuardaCorrecao;
 import br.usp.redes.moodle.commands.ComandoGuardaProva;
 import br.usp.redes.moodle.commands.ComandoGuardaResposta;
@@ -58,6 +59,8 @@ public class ThreadDispatcher implements Runnable {
 					executarComando2(threadPool, usuario, servidor, socket);
 				} else if (comando.equals("3")) {
 					executarComando3(threadPool, usuario, servidor, socket);
+				} else if (comando.equals("4")) {
+					executarComando4(threadPool, usuario, servidor, socket);
 				} else if (comando.equals("Armazenar Prova Criada")) {
 					excutarComandoGuardaProva(threadPool, usuario, servidor, socket);
 				} else if (comando.equals("Armazenar Resposta Criada")) {
@@ -87,6 +90,11 @@ public class ThreadDispatcher implements Runnable {
 	
 	private void executarComando3(ExecutorService threadPool, Usuario usuario, Server servidor, Socket socket) {
 		Command command = new Comando3(threadPool, usuario, servidor, socket);
+		command.execute();
+	}
+	
+	private void executarComando4(ExecutorService threadPool, Usuario usuario, Server servidor, Socket socket) {
+		Command command = new Comando4(threadPool, usuario, servidor, socket);
 		command.execute();
 	}
 	
